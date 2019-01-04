@@ -1,0 +1,358 @@
+from operator import itemgetter, attrgetter, methodcaller
+import itertools
+import random
+import unittest
+import array
+
+suit_list = ['c','d','h','s']
+rank_list = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+ranks_list = ['', '', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+
+class Card:
+    def __init__(self, rank=0, suit=''):
+        if suit in suit_list and rank in rank_list:
+            self.suit = suit
+            self.rank = rank
+    def __repr__(self):
+        #return '{}: {} {}'.format(self.__class__.__name__, self.suit, self.rank) 
+        return repr((self.suit, self.rank))   
+
+    def rank(self):
+        return self.rank
+
+    def suit(self):
+        return self.suit
+
+    def lt(self, other):
+        return self.rank() < other.rank()
+
+    def gt(self, other):
+        return self.rank() > other.rank()
+
+    def eq(self, other):
+        return self.rank == other.rank
+
+    def str(self):
+        return rank_list[self.rank] + suit_list[self.suit]
+
+class Deck(object):
+    def __init__( self ):
+        self.__deck = [Card(r,s) for s in suit_list for r in rank_list]
+        random.shuffle(self.__deck)
+
+    def deal( self ):
+        if len(self.__deck):
+            return self.__deck.pop()
+        else:
+            None
+
+    def is_empty( self ):
+        return len(self.__deck) == 0
+
+    def __len__( self ):
+        return len(self.__deck)
+
+    def deck(self):
+        return self.__deck
+
+    #def cards_in_middle(self):
+    #    board = []
+    #    for i in range(5):
+    #        card = _deck.deal()
+    #        board.append(card)
+    #    max_card_in_hand = max(board)
+
+    #def deal_for_the_players(self):
+    #    player1 = []
+    #    player2 = []
+    #    for i in range(2):
+    #        card1 = deck.deal()
+    #        card2 = deck.deal()
+    #        player1.append(card1)
+    #        player2.append(card2)
+
+    #player1 += board
+    #player2 += board
+
+class Hand(object):
+    def __init__(self, cards=[], score = 0, rate=0):
+        self.cards = sorted(cards, key=attrgetter('rank'))
+        self.rate = rate
+        self.score = score
+        
+    def num_of_occurences(self, rank):
+            j = 0
+            for y in self.cards:
+                if rank == y.rank:
+                    j += 1
+            return j
+
+    def four_of_a_kind(self):
+        for x in self.cards:
+            if self.num_of_occurences(x.rank) >= 4:
+                self.score = x.rank
+                return True
+            else:
+                return False
+
+    def three_of_a_kind(self):
+        ranks = [x.rank for x in self.cards]
+        myset = set(ranks)
+        if len(myset) == 3:
+            self.score = myset.pop()
+            return "threeofakind"
+
+    def one_pair(self):
+        ranks = [x.rank for x in self.cards]
+        myset = set(ranks)
+        if len(myset) == 6:
+            self.score = myset.pop()
+            return "onepair"
+
+    def two_pair(self):
+        j = 0
+        score = 1
+        ranks = [x.rank for x in self.cards]
+        myset = set(ranks)
+        for x in myset:
+            if self.num_of_occurences(x) == 2:
+                score = score * x
+                j += 1
+        if j == 2:
+            self.score = score
+            return "twopair"
+
+    def all_same_suit(self):
+        suits = [x.suit for x in self.cards]
+        myset = set(suits)
+        if len(myset) <= 3:
+            return True
+        else:
+            return False
+
+    def straight1(self):
+        i=-1
+        j=0
+        for x in self.cards:
+            i+=1
+            if i == len(self.cards)-1:
+                break
+            if self.cards[i+1].rank - self.cards[i].rank == 1:
+                j+=1
+            else:
+               j = 0 
+        if j == 4:
+            self.score = self.cards[i-1].rank
+            return True
+        else:
+            return False
+         
+    def straight(self):
+        if not self.all_same_suit() and self.straight1():
+            return "straight"
+
+    def straight_flush(self):
+        i=-1
+        j=0
+        for x in self.cards:
+            i+=1
+            if i == len(self.cards)-1:
+                break
+            if self.cards[i+1].rank - self.cards[i].rank == 1 and self.cards[i+1].suit == self.cards[i].suit:
+                j+=1
+            else:
+                j = 0
+        if j == 4:
+            self.score = self.cards[i-1].rank
+            return "straightflush"
+    
+    def flush(self):
+        if self.all_same_suit() and not self.straight1():
+            i=-1
+            j=0
+            score = 1
+            for x in self.cards:
+                i+=1
+                if i == len(self.cards)-1:
+                    break
+                if self.cards[i+1].suit == self.cards[i].suit:
+                    score += self.cards[i].rank
+                    j+=1
+            if j == 4:
+                self.score = score + self.cards[i].rank
+                return "flush"
+
+    def full_house(self):
+        ranks = [x.rank for x in self.cards]
+        pair = False
+        three = False
+        for x in self.cards:
+            if self.num_of_occurences(x.rank) == 3:
+                three = True
+                score1 = x.rank
+                break
+            if self.num_of_occurences(x.rank) == 2:
+                pair = True
+                score2 = x.rank
+            myset = set(ranks)
+            if len(myset) == 4 and not self.four_of_a_kind():
+                if (pair and three):
+                    self.score = score1*score2
+                    return "fullhouse"
+
+    def rank_of_every_play(self):
+        if self.straight_flush():
+            self.rate = 9
+        elif self.four_of_a_kind():            
+            self.rate = 8
+        elif self.full_house():
+            self.rate = 7
+        elif self.flush():
+            self.rate = 6
+        elif self.straight():
+            self.rate = 5
+        elif self.three_of_a_kind():
+            self.rate = 4
+        elif self.two_pair():
+            self.rate = 3
+        elif self.one_pair():
+            self.rate = 2
+        else:
+            self.rate = 1
+        return self.rate
+
+    def compare(self, other):
+        if self.rate > other.rate:
+            return "Winner is self"
+        elif self.rate < other.rate:
+            return "Other is winner"
+        else:
+            if self.score > other.score:
+                return "Winner is self"
+            elif self.score < other.score:
+                return "Other is winner"
+            else:
+                return "TIE"
+
+    def getRate(self):
+        return self.rate
+
+    def getScore(self):
+        return self.score
+
+    def getCards(self):
+        return self.cards
+
+def main():
+        #test()
+        print ("Let's play poker!")
+        #while True:
+       
+        board = []
+        player1 = []
+        player2 = []
+        bigList = []
+
+        deckObj = Deck()
+
+        for i in range(5):
+            board.append(deckObj.deal())
+
+        
+        y = list(itertools.combinations(deckObj.deck(), 2))
+        len1 = len(y)
+        for x in y:
+            player1 = []
+            player1.append(x[0])
+            player1.append(x[1])
+            player1.extend(board)
+            hand1 = Hand(player1)
+            hand1.rank_of_every_play()
+            bigList.append(hand1)
+            
+        #s = sorted(bigList, key=attrgetter('rate'), reverse=True)
+        s = sorted(bigList, key=lambda x: (x.rate, x.score), reverse=True)
+        
+        maxRate = 0
+        maxScore = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        maxHands = 0
+        for x in s:
+            rate = x.getRate()
+            score = x.getScore()
+            maxHands += 1
+            if maxRate < rate:
+                maxRate = rate
+            if maxScore[rate] < score:
+                maxScore[rate] = score
+
+
+        i = 0
+        tie = 0
+        for x in s:
+            rate = x.getRate()
+            score = x.getScore()
+            try:
+                odds = float(maxHands - i)* 100.0 / float(maxHands)
+                odds2 = 100.00 - odds
+                if i > 0 and rate == oldRate and score == oldScore:
+                    tie += 1
+                else:
+                    tie = 0
+                #odds = (float(rate) / float(maxRate)) + (float(score) / float(maxScore[rate]))
+            except ZeroDivisionError:
+                odds = 0
+                odds2 = 0
+            #if (i <= 4):
+            print ("Rate= ", rate)
+            print ("Score= ", score)
+            print ("Card = ", x.getCards())
+            print ("odd of winning = ", odds)
+            print ("odd of loosing = ", odds2)
+            print ("Tie = ", tie)
+            i += 1    
+            oldRate = rate
+            oldScore = score
+
+if __name__ == "__main__":
+    main()
+
+class TestEverything(unittest.TestCase):
+    def test_setUp(self):
+        self.four_of_a_kind_data = [Card(9, 'c'), Card(9, 's'), Card(9, 'd'), Card(9, 'h'), Card(4, 'c'), Card(8, 'd'), Card(7, 'h')]
+        self.three_of_a_kind_data = [Card(6, 'd'), Card(6, 's'), Card(6, 'c'), Card(11, 'h'), Card(4, 's'), Card(9, 'd'), Card(2, 's')]
+        self.two_pair_data = [Card(5, 'c'), Card(5, 's'), Card(4, 'd'), Card(4, 'h'), Card(10, 'h'), Card(2, 'c'), Card(8, 'd')]
+        self.one_pair_data = [Card(4, 'h'), Card(4, 's'), Card(13, 's'), Card(10, 'd'), Card(5, 's'), Card(2, 'd'), Card(7, 'c')]
+        self.straight_data = [Card(7, 'd'), Card(6, 's'), Card(5, 'h'), Card(4, 'c'), Card(3, 'd'), Card(8, 'c'), Card(10, 'h')]
+        self.straight_flush_data = [Card(10, 'd'), Card(9, 'd'), Card(8, 'd'), Card(7, 'd'), Card(6, 'd'), Card(11, 's'), Card(2, 'h')]
+        self.flush_data = [Card(11, 'h'), Card(10, 'h'), Card(8, 'h'), Card(6, 'h'), Card(3, 'h'), Card(13, 's'), Card(2, 'd')]
+        self.full_house_data = [Card(3, 'c'), Card(3, 's'), Card(3, 'd'), Card(6, 'c'), Card(6, 'h'), Card(8, 'h'), Card(11, 'd')]
+
+        self.four_of_a_kind_data2 = [Card(10, 'c'), Card(10, 's'), Card(10, 'd'), Card(10, 'h'), Card(4, 'c'), Card(8, 'd'), Card(7, 'h')]
+        self.three_of_a_kind_data2 = [Card(9, 'd'), Card(9, 's'), Card(9, 'c'), Card(11, 'h'), Card(4, 's'), Card(9, 'd'), Card(2, 's')]
+        self.two_pair_data2 = [Card(6, 'c'), Card(6, 's'), Card(4, 'd'), Card(4, 'h'), Card(10, 'h'), Card(2, 'c'), Card(8, 'd')]
+        self.one_pair_data2 = [Card(6, 'h'), Card(6, 's'), Card(13, 's'), Card(10, 'd'), Card(5, 's'), Card(2, 'd'), Card(7, 'c')]
+        self.straight_data2 = [Card(10, 'd'), Card(9, 's'), Card(8, 'h'), Card(7, 'c'), Card(6, 'd'), Card(8, 'c'), Card(10, 'h')]
+        self.straight_flush_data2 = [Card(4, 'd'), Card(5, 'd'), Card(6, 'd'), Card(7, 'd'), Card(8, 'd'), Card(11, 's'), Card(2, 'h')]
+        self.flush_data2 = [Card(14, 'h'), Card(10, 'h'), Card(8, 'h'), Card(6, 'h'), Card(3, 'h'), Card(13, 's'), Card(2, 'd')]
+        self.full_house_data2 = [Card(4, 'c'), Card(4, 's'), Card(4, 'd'), Card(6, 'c'), Card(6, 'h'), Card(8, 'h'), Card(11, 'd')]
+    
+    def test_do1(self):
+        self.test_setUp()
+        player1 = self.four_of_a_kind_data
+        player2 = self.four_of_a_kind_data2
+        hand1 = Hand(player1)
+        hand2 = Hand(player2)
+        y = hand1.rank_of_every_play()
+        print("y=", y)
+        self.assertEqual(hand1.rank_of_every_play(), 8)
+        #self.assertEqual(1,1)
+        
+    def test_do2(self):
+        self.test_setUp()
+        player1 = self.four_of_a_kind_data
+        player2 = self.four_of_a_kind_data2
+        hand1 = Hand(player1)
+        hand2 = Hand(player2)
+        hand1.rank_of_every_play()
+        hand2.rank_of_every_play()
+        self.assertEqual(hand1.compare(hand2), "Other is winner")
