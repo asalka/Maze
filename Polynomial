@@ -1,0 +1,250 @@
+import unittest
+
+
+
+class Termnode:
+
+    def __init__(self, coef = None, exp = None, next_node = None):
+
+        self.coef = coef
+
+        self.exp = exp
+
+        self.next_node = next_node
+
+
+
+class PolyType:
+
+    def __init__(self, coef = None, exp = None):
+
+        if coef is None and exp is None:
+
+            self._polyPtr = None  #kinda like the head, right?
+
+        else:
+
+            self._polyPtr = Termnode(coef, exp) #creates a null node correct?
+
+
+
+    def add(self, other):
+
+        newNode = PolyType(0,0)
+
+        firstNewNode = newNode   #See if it changes
+
+        firstOtherNode = other #reason why its not recognizing line 27 is because of this
+
+        firstSelfNode = self #and this
+
+        while self._polyPtr != None and other._polyPtr != None:
+
+            if self._polyPtr.exp > other._polyPtr.exp: #if greater then store as is and move pointer
+
+                newNode._polyPtr.exp = self._polyPtr.exp
+
+                newNode._polyPtr.coef = self._polyPtr.coef
+
+                self._polyPtr = self._polyPtr.next_node
+
+            elif self._polyPtr.exp < other._polyPtr.exp: #if less then store as is and move pointer
+
+                newNode._polyPtr.exp = other._polyPtr.exp
+
+                newNode._polyPtr.coef = other._polyPtr.coef
+
+                other._polyPtr = other._polyPtr.next_node
+
+            else: #else add their coefficients
+
+                newNode._polyPtr.coef = self._polyPtr.coef + other._polyPtr.coef
+
+                newNode._polyPtr.exp = self._polyPtr.exp
+
+        while self._polyPtr != None or other._polyPtr != None:
+
+            temp = PolyType(0,0)
+
+            newNode._polyPtr.next_node = temp._polyPtr
+
+            newNode = temp
+
+            if self._polyPtr != None:
+
+                newNode._polyPtr.exp = self._polyPtr.exp
+
+                newNode._polyPtr.coef = self._polyPtr.coef
+
+                self._polyPtr = self._polyPtr.next_node
+
+            if other._polyPtr != None:
+
+                newNode._polyPtr.exp = other._polyPtr.exp
+
+                newNode._polyPtr.coef = other._polyPtr.coef
+
+                other._polyPtr = other._polyPtr.next_node
+
+        self._polyPtr = firstSelfNode
+
+        other._polyPtr = firstOtherNode
+
+        return firstNewNode #return new polytype of sum of parameter +self
+
+
+
+    def mul(self, other): #supposed to return something?
+
+        newNode = PolyType(0,0)
+
+        firstNewNode = newNode   #See if it changes
+
+        firstOtherNode = other #reason why its not recognizing line 27 is because of this
+
+        firstSelfNode = self #and this
+
+        while self._polyPtr != None:
+
+            other = firstOtherNode
+
+            while other._polyPtr != None:
+
+                newNode._polyPtr.coef = self._polyPtr.coef * other._polyPtr.coef
+
+                newNode._polyPtr.exp = self._polyPtr.exp + other._polyPtr.exp
+
+                if (other._polyPtr.next_node != None):
+
+                    temp = PolyType(0,0)
+
+                    newNode._polyPtr.next_node = temp
+
+                    newNode = temp
+
+                other._polyPtr = other._polyPtr.next_node
+
+            self._polyPtr = self._polyPtr.next_node
+
+        return firstNewNode 
+
+
+
+    def __derive__(self): 
+
+        while self._polyPtr != None:
+
+            new_polyPtr = Termnode(None, None, None)
+
+            new_polyPtr.next_node = None
+
+            new_polyPtr.coef = self._polyPtr.coef * self._polyPtr.exp
+
+            new_polyPtr.exp = self._polyPtr.exp - 1
+
+            self._polyPtr = self._polyPtr.next_node
+
+            new_polyPtr = new_polyPtr.next_node
+
+        new_polyPtr = new_polyPtr.__add__()
+
+        return new_polyPtr
+
+
+
+    def __integrate__(self): 
+
+        while self._polyPtr != None:
+
+            new_polyPtr = Termnode(None, None, None) 
+
+            new_polyPtr.next_node = None
+
+            new_polyPtr.coef = self._polyPtr.coef / (self._polyPtr.exp + 1)
+
+            new_polyPtr.exp = self._polyPtr.exp + 1
+
+            self._polyPtr = self._polyPtr.next_node
+
+            new_polyPtr = new_polyPtr.next_node
+
+        new_polyPtr = new_polyPtr.__add__()
+
+        return new_polyPtr
+
+
+
+    def __str__(self): #see print()
+
+        output = ""
+
+        firstSelfNode = self
+
+        while self._polyPtr != None:
+
+            output = output + str(self._polyPtr.coef) + "x^" + str(self._polyPtr.exp)         
+
+            self._polyPtr = self._polyPtr.next_node 
+
+            if self._polyPtr != None:
+
+                output = output + " + "
+
+        self._polyPtr = firstSelfNode
+
+        return output
+
+
+
+def main():
+
+        #poly1 = PolyType(1,2) #makes a null polynomial
+
+        #print(poly1) 
+
+        poly2 = PolyType(2,3) #makes the polynomial 2.00x^3
+
+        #print(poly2) 
+
+        poly3 = PolyType(3,4) # makes the polynomial 3.00x^4 
+
+        #print(poly3)
+
+        #new_poly = PolyType(None, None)
+
+        poly4 = poly2.add(poly3) # makes poly1 = 3.00x^4 + 2.00x^3 
+
+        print(poly4) # prints out 3.00x^4 + 2.00x^3 
+
+        
+
+        poly1 = PolyType(1,2)
+
+        print(poly1)
+
+        #poly2 = PolyType(2,3)
+
+        poly5 = poly1.mul(poly4) # makes poly1 = 3.00x^4 + 2.00x^3 
+
+        print(poly5)
+
+        
+
+        #poly3 = poly2*poly1 # sets poly3 to 6.0x^7+4.00x^6 
+
+        #print(poly3)
+
+        #poly4 = poly3.__derive__() # sets poly4 to 42.00x^6+24.00x^5 
+
+        #print(poly4)
+
+        #poly5 = poly1.__integrate__() # sets poly5 to .60x^5+.50x^4
+
+        #print(poly5)
+
+
+
+if __name__ == '__main__':
+
+    main()
+
